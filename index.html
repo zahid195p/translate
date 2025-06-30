@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Live Translator</title>
+    <title>Sino-Anglo Academic Translator</title>
 
     <!-- PWA Manifest and Theme -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="LiveTranslate">
-    <link rel="apple-touch-icon" href="https://placehold.co/192x192/4f46e5/ffffff?text=T">
+    <meta name="apple-mobile-web-app-title" content="Translator">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/1d4ed8/ffffff?text=T">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,189 +28,294 @@
             background-color: #f3f4f6;
         }
         .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
+            border: 3px solid rgba(0,0,0,0.1);
             border-radius: 50%;
-            border-top-color: #ffffff;
-            width: 40px;
-            height: 40px;
+            border-top-color: #2563eb;
+            width: 24px;
+            height: 24px;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .mic-btn.recording {
+            animation: pulse 1.5s infinite;
         }
-        .translation-overlay {
-            position: absolute;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 2px 4px;
-            font-size: 14px;
-            line-height: 1.2;
-            border-radius: 4px;
-            text-align: center;
-            pointer-events: none; /* Allows clicks to go through to the image if needed */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
     </style>
 </head>
 <body class="p-4 md:p-6">
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <header class="text-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-bold text-indigo-600">AI Live Translator</h1>
-            <p class="text-gray-500 mt-1">Point your camera at text and translate it instantly.</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-700">Sino-Anglo Academic Translator</h1>
+            <p class="text-gray-500 mt-1">A professional tool for English and Chinese translation.</p>
         </header>
-
-        <!-- Main Display Area -->
-        <div id="display-container" class="relative bg-black rounded-lg shadow-lg w-full aspect-video overflow-hidden">
-            <video id="camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
-            <canvas id="capture-canvas" class="hidden w-full h-full object-cover"></canvas>
-            <div id="translation-results" class="absolute top-0 left-0 w-full h-full"></div>
-            <div id="placeholder" class="absolute inset-0 flex items-center justify-center">
-                 <button id="start-camera-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md">
-                    Start Camera
-                </button>
-            </div>
-            <div id="loading-overlay" class="hidden absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center">
-                <div class="spinner"></div>
-                <p class="text-white mt-4">Analyzing Image...</p>
-            </div>
-        </div>
-
+        
         <!-- Controls -->
-        <div class="bg-white mt-4 p-4 rounded-lg shadow-md border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-2 w-full md:w-auto">
-                <label for="target-language" class="text-sm font-medium">Translate To:</label>
-                <select id="target-language" class="w-full md:w-auto border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <option value="English">English</option>
-                    <option value="Spanish">Spanish</option>
-                    <option value="French">French</option>
-                    <option value="German">German</option>
-                    <option value="Urdu">Urdu</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Arabic">Arabic</option>
-                    <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 mb-4">
+            <div class="flex items-center gap-2">
+                <label for="tone-select" class="font-medium text-gray-700">Tone:</label>
+                <select id="tone-select" class="border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="Normal">Normal</option>
+                    <option value="Academic">Academic</option>
+                    <option value="Respectful">Respectful</option>
                 </select>
             </div>
-            
-            <button id="capture-btn" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-md disabled:bg-indigo-300 disabled:cursor-not-allowed" disabled>
-                Capture & Translate
+            <button id="dictionary-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Personal Dictionary</button>
+        </div>
+
+        <!-- Translator Interface -->
+        <div class="flex flex-col md:flex-row items-start justify-center gap-2">
+            <!-- Panel 1 -->
+            <div id="panel1" class="w-full bg-white p-4 rounded-lg shadow-md border">
+                <h2 id="lang1-label" class="text-lg font-bold text-gray-800 mb-2">English</h2>
+                <textarea id="input1" class="w-full h-40 border-gray-200 rounded-md p-2" placeholder="Type or use microphone..."></textarea>
+                <div class="flex items-center justify-between mt-2">
+                    <div class="flex items-center gap-2">
+                        <button id="speak1-btn" class="p-2 rounded-full hover:bg-gray-100"><i class="ph-speaker-high text-2xl text-gray-600"></i></button>
+                        <button id="mic1-btn" class="mic-btn p-2 rounded-full hover:bg-gray-100"><i class="ph-microphone text-2xl text-gray-600"></i></button>
+                    </div>
+                    <button id="translate1-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg flex items-center">
+                        <span class="mr-2">Translate</span>
+                        <div id="spinner1" class="spinner hidden"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Swap Button -->
+            <button id="swap-btn" class="p-3 bg-white rounded-full shadow-md hover:bg-gray-100 self-center my-2 md:my-0">
+                <i class="ph-arrows-left-right text-2xl text-blue-600"></i>
             </button>
+
+            <!-- Panel 2 -->
+            <div id="panel2" class="w-full bg-white p-4 rounded-lg shadow-md border">
+                <h2 id="lang2-label" class="text-lg font-bold text-gray-800 mb-2">Chinese</h2>
+                <textarea id="input2" class="w-full h-40 border-gray-200 rounded-md p-2" placeholder="输入或使用麦克风..."></textarea>
+                <div id="pinyin-output" class="mt-1 text-sm text-gray-500 bg-gray-50 p-2 rounded"></div>
+                <div class="flex items-center justify-between mt-2">
+                    <div class="flex items-center gap-2">
+                        <button id="speak2-btn" class="p-2 rounded-full hover:bg-gray-100"><i class="ph-speaker-high text-2xl text-gray-600"></i></button>
+                        <button id="mic2-btn" class="mic-btn p-2 rounded-full hover:bg-gray-100"><i class="ph-microphone text-2xl text-gray-600"></i></button>
+                    </div>
+                     <button id="save-btn" class="p-2 rounded-full hover:bg-gray-100" title="Save to Personal Dictionary">
+                        <i class="ph-bookmark-simple text-2xl text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dictionary Modal -->
+    <div id="dictionary-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold">Personal Dictionary</h2>
+                <button id="close-dictionary-btn" class="p-1 rounded-full hover:bg-gray-200">&times;</button>
+            </div>
+            <div id="dictionary-content" class="p-4 overflow-y-auto"></div>
+            <div class="p-4 border-t">
+                <button id="download-dictionary-btn" class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg">Download Academic Dictionary (Placeholder)</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION & ELEMENTS ---
-        const startBtn = document.getElementById('start-camera-btn');
-        const captureBtn = document.getElementById('capture-btn');
-        const videoEl = document.getElementById('camera-feed');
-        const canvasEl = document.getElementById('capture-canvas');
-        const resultsContainer = document.getElementById('translation-results');
-        const placeholder = document.getElementById('placeholder');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const targetLanguageSelect = document.getElementById('target-language');
-        
-        let stream = null;
+        // --- CONFIGURATION & STATE ---
+        let state = {
+            lang1: 'English',
+            lang2: 'Chinese',
+            isRecording1: false,
+            isRecording2: false,
+            personalDictionary: JSON.parse(localStorage.getItem('personalDictionary')) || []
+        };
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+
+        // --- ELEMENTS ---
+        const el = {
+            panel1: document.getElementById('panel1'),
+            panel2: document.getElementById('panel2'),
+            lang1Label: document.getElementById('lang1-label'),
+            lang2Label: document.getElementById('lang2-label'),
+            input1: document.getElementById('input1'),
+            input2: document.getElementById('input2'),
+            pinyinOutput: document.getElementById('pinyin-output'),
+            swapBtn: document.getElementById('swap-btn'),
+            speak1Btn: document.getElementById('speak1-btn'),
+            speak2Btn: document.getElementById('speak2-btn'),
+            mic1Btn: document.getElementById('mic1-btn'),
+            mic2Btn: document.getElementById('mic2-btn'),
+            translate1Btn: document.getElementById('translate1-btn'),
+            spinner1: document.getElementById('spinner1'),
+            saveBtn: document.getElementById('save-btn'),
+            dictionaryBtn: document.getElementById('dictionary-btn'),
+            dictionaryModal: document.getElementById('dictionary-modal'),
+            closeDictionaryBtn: document.getElementById('close-dictionary-btn'),
+            dictionaryContent: document.getElementById('dictionary-content'),
+            downloadDictionaryBtn: document.getElementById('download-dictionary-btn')
+        };
 
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
-            startBtn.addEventListener('click', startCamera);
-            captureBtn.addEventListener('click', handleCaptureAndTranslate);
+            el.swapBtn.addEventListener('click', swapLanguages);
+            el.translate1Btn.addEventListener('click', () => translate(1));
+            el.speak1Btn.addEventListener('click', () => speak(el.input1.value, state.lang1));
+            el.speak2Btn.addEventListener('click', () => speak(el.input2.value, state.lang2));
+            el.mic1Btn.addEventListener('click', () => toggleRecording(1));
+            el.mic2Btn.addEventListener('click', () => toggleRecording(2));
+            el.saveBtn.addEventListener('click', saveToDictionary);
+            el.dictionaryBtn.addEventListener('click', openDictionary);
+            el.closeDictionaryBtn.addEventListener('click', () => el.dictionaryModal.classList.add('hidden'));
+            el.downloadDictionaryBtn.addEventListener('click', () => alert('This feature would enable downloading a large, pre-compiled dictionary for full offline academic translations in a full-scale application.'));
+            updateUIForState();
         });
+        
+        // --- CORE FUNCTIONS ---
+        async function translate(sourcePanelNum) {
+            const sourceLang = state[`lang${sourcePanelNum}`];
+            const targetLang = sourcePanelNum === 1 ? state.lang2 : state.lang1;
+            const sourceInput = el[`input${sourcePanelNum}`];
+            const targetInput = sourcePanelNum === 1 ? el.input2 : el.input1;
+            const spinner = el.spinner1;
 
-        // --- CAMERA & CAPTURE LOGIC ---
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                videoEl.srcObject = stream;
-                placeholder.classList.add('hidden');
-                captureBtn.disabled = false;
-            } catch (err) {
-                console.error("Error accessing camera: ", err);
-                alert("Could not access the camera. Please ensure you have given permission.");
-            }
-        }
+            if (!sourceInput.value.trim()) return;
 
-        async function handleCaptureAndTranslate() {
-            if (!stream) return;
+            spinner.classList.remove('hidden');
+            el.translate1Btn.disabled = true;
+
+            const tone = document.getElementById('tone-select').value;
+            const prompt = `Translate the following text from ${sourceLang} to ${targetLang}. The tone should be ${tone}. For any Chinese translation, provide both the characters and a separate Pinyin transcription. Respond with ONLY a valid JSON object with two keys: "translation" and "pinyin". If there is no pinyin (e.g., translating to English), the pinyin value should be an empty string.`;
+            const textToTranslate = `Text to translate: "${sourceInput.value}"`;
             
-            // Clear previous results
-            resultsContainer.innerHTML = '';
-
-            // Show loading state
-            loadingOverlay.classList.remove('hidden');
-            captureBtn.disabled = true;
-
-            const context = canvasEl.getContext('2d');
-            canvasEl.width = videoEl.videoWidth;
-            canvasEl.height = videoEl.videoHeight;
-            context.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
-
-            const imageDataUrl = canvasEl.toDataURL('image/jpeg');
-            const imageBase64 = imageDataUrl.split(',')[1];
-
-            const targetLanguage = targetLanguageSelect.value;
-            // A more complex prompt asking for bounding boxes
-            const prompt = `Analyze the provided image. Identify all distinct blocks of text. For each block, provide:
-1. The original text.
-2. Its translation into ${targetLanguage}.
-3. A bounding box for the original text with keys {x, y, width, height}, where values are percentages of the image dimensions.
-Respond with ONLY a valid JSON array of objects. Each object must have three keys: "original", "translated", and "box".`;
-
-            const resultText = await callGemini(prompt, imageBase64);
-            
-            loadingOverlay.classList.add('hidden');
-            captureBtn.disabled = false;
+            const result = await callGemini(`${prompt}\n${textToTranslate}`);
 
             try {
-                const jsonString = resultText.match(/\[.*\]/s)[0];
-                const translations = JSON.parse(jsonString);
-                displayTranslationsOnImage(translations);
+                const jsonString = result.match(/{.*}/s)[0];
+                const data = JSON.parse(jsonString);
+                
+                targetInput.value = data.translation;
+                
+                if (targetLang === 'Chinese') {
+                    el.pinyinOutput.textContent = data.pinyin || '';
+                } else {
+                    el.pinyinOutput.textContent = '';
+                }
             } catch (error) {
-                console.error("Failed to parse JSON from Gemini response:", error);
-                alert("Error: The AI response was not in the expected format. Please try again.");
+                console.error("Failed to parse AI response:", error);
+                targetInput.value = "Error: Could not understand the AI's response.";
             }
+
+            spinner.classList.add('hidden');
+            el.translate1Btn.disabled = false;
         }
 
-        // --- UI & RENDERING ---
-        function displayTranslationsOnImage(translations) {
-            resultsContainer.innerHTML = ''; // Clear previous overlays
-            if (translations.length === 0) {
-                alert("No text was found in the image.");
+        function swapLanguages() {
+            [state.lang1, state.lang2] = [state.lang2, state.lang1];
+            [el.input1.value, el.input2.value] = [el.input2.value, el.input1.value];
+            el.pinyinOutput.textContent = '';
+            updateUIForState();
+        }
+        
+        function updateUIForState() {
+            el.lang1Label.textContent = state.lang1;
+            el.lang2Label.textContent = state.lang2;
+            el.input1.placeholder = state.lang1 === 'English' ? 'Type or use microphone...' : '输入或使用麦克风...';
+            el.input2.placeholder = state.lang2 === 'English' ? 'Type or use microphone...' : '输入或使用麦克风...';
+        }
+
+        // --- SPEECH & MIC ---
+        function speak(text, lang) {
+            if (!text || !window.speechSynthesis) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            const langCode = lang === 'English' ? 'en-US' : 'zh-CN';
+            utterance.lang = langCode;
+            speechSynthesis.speak(utterance);
+        }
+
+        function toggleRecording(panelNum) {
+            const isRecording = state[`isRecording${panelNum}`];
+            const micBtn = el[`mic${panelNum}`];
+
+            if (isRecording) {
+                recognition.stop();
                 return;
             }
 
-            translations.forEach(t => {
-                if (!t.box || !t.translated) return;
+            if (!SpeechRecognition) {
+                alert("Speech recognition is not supported in your browser.");
+                return;
+            }
 
-                const overlay = document.createElement('div');
-                overlay.className = 'translation-overlay';
-                overlay.textContent = t.translated;
-                
-                // Position the overlay based on the returned percentages
-                overlay.style.left = `${t.box.x}%`;
-                overlay.style.top = `${t.box.y}%`;
-                overlay.style.width = `${t.box.width}%`;
-                overlay.style.height = `${t.box.height}%`;
-                
-                // Adjust font size dynamically based on box height to fit text
-                const boxHeightPx = (t.box.height / 100) * canvasEl.clientHeight;
-                overlay.style.fontSize = `${Math.max(8, boxHeightPx * 0.6)}px`;
-                
-                resultsContainer.appendChild(overlay);
-            });
-        }
-
-        // --- GEMINI API CALL ---
-        async function callGemini(prompt, imageBase64) {
-            const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=`; // Key is blank for security
-
-            const payload = {
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { inline_data: { mime_type: "image/jpeg", data: imageBase64 } }
-                    ]
-                }]
+            recognition = new SpeechRecognition();
+            recognition.lang = state[`lang${panelNum}`] === 'English' ? 'en-US' : 'zh-CN';
+            recognition.interimResults = false;
+            
+            recognition.onstart = () => {
+                state[`isRecording${panelNum}`] = true;
+                micBtn.classList.add('recording');
             };
 
+            recognition.onend = () => {
+                state[`isRecording${panelNum}`] = false;
+                micBtn.classList.remove('recording');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                el[`input${panelNum}`].value = transcript;
+                if (panelNum === 1) {
+                    translate(1);
+                }
+            };
+            
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                alert(`Error in speech recognition: ${event.error}`);
+            };
+
+            recognition.start();
+        }
+        
+        // --- DICTIONARY ---
+        function saveToDictionary() {
+            const original = state.lang1 === 'English' ? el.input1.value : el.input2.value;
+            const translated = state.lang1 === 'English' ? el.input2.value : el.input1.value;
+
+            if (original.trim() && translated.trim()) {
+                state.personalDictionary.unshift({ original, translated });
+                localStorage.setItem('personalDictionary', JSON.stringify(state.personalDictionary));
+                alert("Saved to dictionary!");
+            } else {
+                alert("Nothing to save.");
+            }
+        }
+
+        function openDictionary() {
+            const content = el.dictionaryContent;
+            content.innerHTML = '';
+            if (state.personalDictionary.length === 0) {
+                content.innerHTML = '<p class="text-gray-500">Your personal dictionary is empty.</p>';
+            } else {
+                state.personalDictionary.forEach(item => {
+                    const entry = document.createElement('div');
+                    entry.className = 'p-3 border-b';
+                    entry.innerHTML = `
+                        <p class="font-semibold text-gray-800">${item.original}</p>
+                        <p class="text-blue-600">${item.translated}</p>
+                    `;
+                    content.appendChild(entry);
+                });
+            }
+            el.dictionaryModal.classList.remove('hidden');
+        }
+
+        // --- GEMINI API ---
+        async function callGemini(prompt) {
+            const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
             try {
                 const response = await fetch(GEMINI_API_URL, {
                     method: 'POST',
@@ -219,45 +324,103 @@ Respond with ONLY a valid JSON array of objects. Each object must have three key
                 });
                 if (!response.ok) throw new Error(`API error: ${response.statusText}`);
                 const data = await response.json();
-                if (data.candidates && data.candidates.length > 0) {
-                    return data.candidates[0].content.parts[0].text;
-                }
-                throw new Error("No content found in Gemini response.");
+                return data.candidates[0].content.parts[0].text;
             } catch (error) {
                 console.error("Gemini API call failed:", error);
-                return `[{"error": "Failed to call AI. ${error.message}"}]`;
+                return `{"translation": "Error calling AI. Check console.", "pinyin": ""}`;
             }
-        }
-    </script>
-    
-    <!-- PWA Functionality (Virtual Files) -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').catch(err => console.error('SW reg failed: ', err));
-            });
-        }
-
-        if (window.location.pathname.endsWith('/manifest.json')) {
-            const manifest = {
-                "name": "AI Live Translator", "short_name": "LiveTranslate", "start_url": ".", "display": "standalone",
-                "background_color": "#f3f4f6", "theme_color": "#ffffff", "description": "Translate text from your camera with AI.",
-                "icons": [{"src": "https://placehold.co/192x192/4f46e5/ffffff?text=T", "sizes": "192x192", "type": "image/png"},
-                          {"src": "https://placehold.co/512x512/4f46e5/ffffff?text=T", "sizes": "512x512", "type": "image/png"}]
-            };
-            self.addEventListener('fetch', e => e.respondWith(new Response(JSON.stringify(manifest), { headers: { 'Content-Type': 'application/json' } })));
-        }
-        
-        if (window.location.pathname.endsWith('/service-worker.js')) {
-            const swContent = `
-                const CACHE_NAME = 'live-translator-v1';
-                const ASSETS_TO_CACHE = ['/', 'index.html', 'https://cdn.tailwindcss.com', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap'];
-                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS_TO_CACHE))));
-                self.addEventListener('activate', e => e.waitUntil(caches.keys().then(n => Promise.all(n.map(c => c !== CACHE_NAME ? caches.delete(c) : null)))));
-                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-            `;
-            self.addEventListener('fetch', e => e.respondWith(new Response(swContent, { headers: { 'Content-Type': 'application/javascript' } })));
         }
     </script>
 </body>
 </html>
+```
+
+### 2. The Manifest File (`manifest.json`)
+
+This file configures the app's name, icon, and colors when installed on your phone.
+
+```json
+{
+    "name": "Sino-Anglo Academic Translator",
+    "short_name": "Translator",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#f3f4f6",
+    "theme_color": "#ffffff",
+    "description": "A professional tool for English and Chinese translation.",
+    "icons": [
+        {
+            "src": "icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
+```
+
+### 3. The Service Worker (`service-worker.js`)
+
+This file enables the basic app shell to load offline.
+
+```javascript
+const CACHE_NAME = 'academic-translator-v1';
+const ASSETS_TO_CACHE = [
+    '/',
+    'index.html',
+    'manifest.json',
+    'icon-192x192.png',
+    'icon-512x512.png',
+    'https://cdn.tailwindcss.com',
+    'https://unpkg.com/@phosphor-icons/web'
+];
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => {
+            console.log('Caching app shell');
+            return cache.addAll(ASSETS_TO_CACHE);
+        })
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
+});
+
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request).then(response => {
+            return response || fetch(event.request);
+        })
+    );
+});
+```
+
+### 4. New Icons
+
+* **`icon-192x192.png`**: [Download Link](https://placehold.co/192x192/1d4ed8/ffffff?text=T)
+* **`icon-512x512.png`**: [Download Link](https://placehold.co/512x512/1d4ed8/ffffff?text=T)
+
+### How to Deploy
+
+1.  **Create New Repository:** I recommend creating a new, public GitHub repository named `academic-translator`.
+2.  **Upload All New Files:** Add the new `index.html`, `manifest.json`, `service-worker.js`, and the two new icon files.
+3.  **Deploy with GitHub Pages:** Go to the repository settings, click on "Pages," set the source to deploy from the `main` branch, and save.
+4.  **Install on Your Phone:** Open the new GitHub Pages link on your phone and "Add to Home Screen" to use it as a P
