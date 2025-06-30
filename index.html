@@ -6,7 +6,7 @@
     <title>Sino-Anglo Academic Translator</title>
 
     <!-- PWA Manifest and Theme -->
-    <link rel="manifest" href="manifest.json">
+    <link id="manifest-link" rel="manifest" href="">
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -171,6 +171,7 @@
             el.closeDictionaryBtn.addEventListener('click', () => el.dictionaryModal.classList.add('hidden'));
             el.downloadDictionaryBtn.addEventListener('click', () => alert('This feature would enable downloading a large, pre-compiled dictionary for full offline academic translations in a full-scale application.'));
             updateUIForState();
+            setupPWA();
         });
         
         // --- CORE FUNCTIONS ---
@@ -229,6 +230,7 @@
         // --- SPEECH & MIC ---
         function speak(text, lang) {
             if (!text || !window.speechSynthesis) return;
+            speechSynthesis.cancel(); // Cancel any previous speech
             const utterance = new SpeechSynthesisUtterance(text);
             const langCode = lang === 'English' ? 'en-US' : 'zh-CN';
             utterance.lang = langCode;
@@ -240,7 +242,7 @@
             const micBtn = el[`mic${panelNum}`];
 
             if (isRecording) {
-                recognition.stop();
+                if (recognition) recognition.stop();
                 return;
             }
 
@@ -261,6 +263,7 @@
             recognition.onend = () => {
                 state[`isRecording${panelNum}`] = false;
                 micBtn.classList.remove('recording');
+                recognition = null;
             };
 
             recognition.onresult = (event) => {
@@ -330,97 +333,80 @@
                 return `{"translation": "Error calling AI. Check console.", "pinyin": ""}`;
             }
         }
+
+        // --- PWA SETUP ---
+        function setupPWA() {
+            // 1. Define Manifest Content
+            const manifestContent = {
+                "name": "Sino-Anglo Academic Translator",
+                "short_name": "Translator",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#f3f4f6",
+                "theme_color": "#ffffff",
+                "description": "A professional tool for English and Chinese translation.",
+                "icons": [
+                    { "src": "https://placehold.co/192x192/1d4ed8/ffffff?text=T", "sizes": "192x192", "type": "image/png" },
+                    { "src": "https://placehold.co/512x512/1d4ed8/ffffff?text=T", "sizes": "512x512", "type": "image/png" }
+                ]
+            };
+
+            // 2. Create a Blob URL for the Manifest and link it
+            const manifestBlob = new Blob([JSON.stringify(manifestContent)], { type: 'application/json' });
+            const manifestURL = URL.createObjectURL(manifestBlob);
+            document.querySelector('#manifest-link').setAttribute('href', manifestURL);
+
+            // 3. Define Service Worker Content
+            const swContent = `
+                const CACHE_NAME = 'academic-translator-v1';
+                const ASSETS_TO_CACHE = [
+                    '/',
+                    './', // Cache the root URL which is the HTML file itself
+                    'https://cdn.tailwindcss.com',
+                    'https://unpkg.com/@phosphor-icons/web',
+                    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap'
+                ];
+
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then(cache => {
+                            return cache.addAll(ASSETS_TO_CACHE);
+                        })
+                    );
+                });
+
+                self.addEventListener('activate', event => {
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    if (cacheName !== CACHE_NAME) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request).then(response => {
+                            return response || fetch(event.request);
+                        })
+                    );
+                });
+            `;
+            
+            // 4. Create a Blob URL for the Service Worker and register it
+            if ('serviceWorker' in navigator) {
+                const swBlob = new Blob([swContent], { type: 'application/javascript' });
+                const swURL = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swURL)
+                    .then(reg => console.log('Service Worker registered successfully.', reg))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            }
+        }
     </script>
 </body>
 </html>
-```
-
-### 2. The Manifest File (`manifest.json`)
-
-This file configures the app's name, icon, and colors when installed on your phone.
-
-```json
-{
-    "name": "Sino-Anglo Academic Translator",
-    "short_name": "Translator",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#f3f4f6",
-    "theme_color": "#ffffff",
-    "description": "A professional tool for English and Chinese translation.",
-    "icons": [
-        {
-            "src": "icon-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "icon-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ]
-}
-```
-
-### 3. The Service Worker (`service-worker.js`)
-
-This file enables the basic app shell to load offline.
-
-```javascript
-const CACHE_NAME = 'academic-translator-v1';
-const ASSETS_TO_CACHE = [
-    '/',
-    'index.html',
-    'manifest.json',
-    'icon-192x192.png',
-    'icon-512x512.png',
-    'https://cdn.tailwindcss.com',
-    'https://unpkg.com/@phosphor-icons/web'
-];
-
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            console.log('Caching app shell');
-            return cache.addAll(ASSETS_TO_CACHE);
-        })
-    );
-});
-
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
-
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request);
-        })
-    );
-});
-```
-
-### 4. New Icons
-
-* **`icon-192x192.png`**: [Download Link](https://placehold.co/192x192/1d4ed8/ffffff?text=T)
-* **`icon-512x512.png`**: [Download Link](https://placehold.co/512x512/1d4ed8/ffffff?text=T)
-
-### How to Deploy
-
-1.  **Create New Repository:** I recommend creating a new, public GitHub repository named `academic-translator`.
-2.  **Upload All New Files:** Add the new `index.html`, `manifest.json`, `service-worker.js`, and the two new icon files.
-3.  **Deploy with GitHub Pages:** Go to the repository settings, click on "Pages," set the source to deploy from the `main` branch, and save.
-4.  **Install on Your Phone:** Open the new GitHub Pages link on your phone and "Add to Home Screen" to use it as a P
